@@ -2,17 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const morgan = require('morgan');
-const { OpenAI } = require('openai'); // Import OpenAI
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // Import Gemini
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 const uri = process.env.MONGODB_URI;
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Middleware
 app.use(cors());
@@ -81,18 +79,11 @@ app.post('/api/ask', async (req, res) => {
   try {
     const { query } = req.body;
 
-    // Use OpenAI to generate a response
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo', // Use GPT-3.5 or GPT-4
-      messages: [
-        { role: 'system', content: 'You are a helpful eCommerce assistant.' },
-        { role: 'user', content: query },
-      ],
-      max_tokens: 150, // Limit response length
-    });
-
-    // Extract the AI's response
-    const answer = completion.choices[0].message.content;
+    // Use Gemini to generate a response
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const result = await model.generateContent(query);
+    const response = await result.response;
+    const answer = response.text();
 
     res.json({ answer });
   } catch (error) {
