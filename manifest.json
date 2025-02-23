@@ -1,14 +1,17 @@
 {
-    "manifest_version": 3,
-    "name": "eCommerce Analytics Assistant",
-    "version": "1.0",
-    "description": "Analytics agent for eCommerce optimization",
-    "permissions": [
-      "activeTab",
-      "storage"
-    ],
-    "content_scripts": [{
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
-    }]
+  "manifest_version": 3,
+  "name": "eCommerce Analytics Assistant",
+  "version": "1.0",
+  "description": "Analytics agent for eCommerce optimization",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"]
+  }],
+  "action": {
+    "default_popup": "popup.html"
   }
+}

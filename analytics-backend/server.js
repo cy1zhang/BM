@@ -1,21 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
+const morgan = require('morgan');
+require('dotenv').config();
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(morgan('dev'));
 
-// Replace this with your actual connection string from MongoDB Atlas
-// It should look something like:
-// mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
-const uri = "mongodb+srv://alexcy1zhang:t4ywplVLi5FnE5BN@cluster0.edqkg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+// MongoDB connection string from environment variables
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
 
 let db;
 
@@ -27,11 +25,9 @@ async function connectToDatabase() {
     console.log('Connected to MongoDB Atlas');
   } catch (error) {
     console.error('Could not connect to MongoDB Atlas:', error);
+    process.exit(1);
   }
 }
-
-// Connect to database when server starts
-connectToDatabase();
 
 // API endpoint for receiving interaction data
 app.post('/analyze', async (req, res) => {
@@ -43,7 +39,13 @@ app.post('/analyze', async (req, res) => {
     }
 
     const { interaction, nearbyElements, previousInteractions } = req.body;
-    
+
+    if (!interaction) {
+      return res.status(400).json({ 
+        error: 'Missing required field: interaction' 
+      });
+    }
+
     // Store the interaction data
     await db.collection('interactions').insertOne({
       ...interaction,
@@ -58,7 +60,7 @@ app.post('/analyze', async (req, res) => {
       helpContent: 'Need help finding something?',
       suggestions: []
     };
-    
+
     res.json(analysis);
   } catch (error) {
     console.error('Analysis error:', error);
@@ -77,14 +79,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Connect to database and start server
+connectToDatabase().then(() => {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });
 
-// Handle shutdown gracefully
-process.on('SIGINT', async () => {
+// Graceful shutdown
+const gracefulShutdown = async () => {
   try {
     await client.close();
     console.log('MongoDB connection closed');
@@ -93,4 +97,7 @@ process.on('SIGINT', async () => {
     console.error('Error during shutdown:', error);
     process.exit(1);
   }
-});
+};
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
