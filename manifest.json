@@ -1,5 +1,5 @@
 {
-    "manifest_version": 2,
+    "manifest_version": 3,
     "name": "eCommerce Analytics Assistant",
     "version": "1.0",
     "description": "Analytics agent for eCommerce optimization",
