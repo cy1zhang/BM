@@ -2,24 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const morgan = require('morgan');
+const { OpenAI } = require('openai'); // Import OpenAI
 require('dotenv').config();
 
 const app = express();
+const port = process.env.PORT || 3000;
+const uri = process.env.MONGODB_URI;
+
+// Initialize OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// MongoDB connection string from environment variables
-const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri);
-
 let db;
 
 // Connect to MongoDB
 async function connectToDatabase() {
   try {
+    const client = new MongoClient(uri);
     await client.connect();
     db = client.db('ecommerce_analytics');
     console.log('Connected to MongoDB Atlas');
@@ -71,6 +76,34 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
+// API endpoint for AI agent
+app.post('/api/ask', async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    // Use OpenAI to generate a response
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo', // Use GPT-3.5 or GPT-4
+      messages: [
+        { role: 'system', content: 'You are a helpful eCommerce assistant.' },
+        { role: 'user', content: query },
+      ],
+      max_tokens: 150, // Limit response length
+    });
+
+    // Extract the AI's response
+    const answer = completion.choices[0].message.content;
+
+    res.json({ answer });
+  } catch (error) {
+    console.error('AI error:', error);
+    res.status(500).json({ 
+      error: 'AI failed to generate a response',
+      message: error.message 
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
@@ -81,9 +114,8 @@ app.get('/health', (req, res) => {
 
 // Connect to database and start server
 connectToDatabase().then(() => {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
   });
 });
 
